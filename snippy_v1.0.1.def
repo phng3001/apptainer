@@ -1,0 +1,38 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%labels
+    Maintainer phng3001
+    Container snippy
+    Version 1.0.1
+    Source https://github.com/tseemann/snippy
+
+%post
+    # Install dependencies
+    apt update && apt install -y wget
+    # Install Miniforge (including Mamba)
+    wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/miniforge.sh     
+    bash /tmp/miniforge.sh -b -p /opt/conda
+    rm /tmp/miniforge.sh
+    # Initialize Conda
+    /opt/conda/bin/conda init bash
+    # Create and install Conda snippy environment
+    /opt/conda/bin/conda create -y -n snippy
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate snippy
+    mamba install -y -c conda-forge -c bioconda -c defaults snippy
+
+%environment
+    # Set environment variables
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate snippy
+
+%test
+    whereis snippy
+    snippy --check
+
+%help
+    Container providing snippy 4.6.0 https://github.com/tseemann/snippy
+    Examples of usage:
+    $ apptainer exec snippy_vx.y.z.sif snippy [options] [arguments]
+    $ apptainer exec -C -B /directory/path/containing/script snippy_vx.y.z.sif bash absolute/path/to/script.sh
