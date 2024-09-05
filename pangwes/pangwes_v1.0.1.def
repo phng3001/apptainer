@@ -1,0 +1,76 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%labels
+        Maintainer phng3001
+        Container pangwes
+        Version 1.0.1
+        Package PAN-GWES
+        Publication https://genome.cshlp.org/content/34/7/1081.long
+        Source https://github.com/jurikuronen/PANGWES
+        Source https://github.com/Sudaraka88/PAN-GWES
+
+%post
+        # Install dependencies
+        apt update && apt install -y wget git build-essential
+
+        # Install Miniforge (including Mamba)
+        wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/miniforge.sh     
+        bash /tmp/miniforge.sh -b -p /opt/conda
+        rm /tmp/miniforge.sh
+
+        # Initialize Conda
+        /opt/conda/bin/conda init bash
+
+        # Create and install Conda pangwes environment
+        /opt/conda/bin/conda create -y -n pangwes
+        . /opt/conda/etc/profile.d/conda.sh
+        conda activate pangwes
+        mamba install -y -c bioconda -c conda-forge pangwes
+
+        # Clone and install GitHub packages
+        git clone https://github.com/jurikuronen/gfa1_parser /opt/gfa1_parser
+        cd /opt/gfa1_parser
+        make
+
+        git clone https://github.com/jurikuronen/unitig_distance /opt/unitig_distance
+        cd /opt/unitig_distance
+        make
+
+        # Overwrite the gfa1_parser path from Conda with the one from GitHub
+        ln -sf /opt/gfa1_parser/bin/gfa1_parser /opt/conda/envs/pangwes/bin/gfa1_parser
+
+        # Overwrite the unitig_distance path from Conda with the one from GitHub
+        ln -sf /opt/gfa1_parser/bin/unitig_distance /opt/conda/envs/pangwes/bin/unitig_distance
+
+        # Add two lines to the end of gwes_plot.r
+        echo "" >> /opt/conda/envs/pangwes/bin/gwes_plot.r
+        echo 'cat(paste0("Outlier threshold: ", outlier_threshold, "\\n"))' >> /opt/conda/envs/pangwes/bin/gwes_plot.r
+        echo 'cat(paste0("Extreme outlier threshold: ", extreme_outlier_threshold, "\\n"))' >> /opt/conda/envs/pangwes/bin/gwes_plot.r
+
+%environment
+        # Set environment variables
+        export PATH=/opt/gfa1_parser/bin:/opt/unitig_distance/bin:/opt/conda/bin:$PATH
+        . /opt/conda/etc/profile.d/conda.sh
+        conda activate pangwes
+
+%test
+        whereis gfa1_parser
+        whereis unitig_distance
+        whereis cuttlefish
+        whereis SpydrPick
+        whereis gwes_plot.r
+        echo "Two lines added to the script gwes_plot.r"
+        tail -n2 /opt/conda/envs/pangwes/bin/gwes_plot.r
+
+%help
+        Container providing tools included in the PANGWES package https://github.com/jurikuronen/PANGWES
+        gfa1_parser https://github.com/jurikuronen/gfa1_parser
+        unitig_distance https://github.com/jurikuronen/unitig_distance
+        cuttlefish https://github.com/COMBINE-lab/cuttlefish
+        SpydrPick https://github.com/santeripuranen/SpydrPick
+        gwes_plot.r https://github.com/Sudaraka88/PAN-GWES/blob/main/sw/pangwes/scripts/gwes_plot.r
+        gwes_plot.r script was modified to print out the outlier and extreme outlier threshold
+        Examples of usage:
+        $ apptainer exec pangwes_vx.y.z.sif gfa1_parser [options] [arguments]
+        $ apptainer exec -C -B /directory/path/containing/script pangwes_vx.y.z.sif bash absolute/path/to/script.sh
