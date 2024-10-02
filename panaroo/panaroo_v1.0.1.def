@@ -1,0 +1,45 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%labels
+    Maintainer phng3001
+    Container panaroo
+    Version 1.0.1
+    Source https://github.com/gtonkinhill/panaroo
+
+%post
+    # Install dependencies
+    apt update && apt install -y wget
+    # Install Miniforge (including Mamba)
+    wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/miniforge.sh     
+    bash /tmp/miniforge.sh -b -p /opt/conda
+    rm /tmp/miniforge.sh
+    # Initialize Conda
+    /opt/conda/bin/conda init bash
+    # Create and install Conda panaroo environment
+    /opt/conda/bin/conda create -y -n panaroo
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate panaroo
+    mamba install -c conda-forge -c bioconda -c defaults 'panaroo>=1.3'
+    mamba install -c bioconda iqtree
+
+%environment
+    # Set environment variables
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate panaroo
+
+%test
+    whereis panaroo
+    panaroo --version
+    whereis mash
+    mash --version
+    whereis iqtree
+    iqtree --version
+
+%help
+    Container providing panaroo 1.5.0 https://github.com/gtonkinhill/panaroo
+    and iqtree 2.3.6 https://github.com/iqtree/iqtree2 
+    Examples of usage:
+    $ apptainer exec panaroo_vx.y.z.sif panaroo [options] [arguments]
+    $ apptainer exec -C -B /directory/path/containing/script panaroo_vx.y.z.sif bash absolute/path/to/script.sh
+    
